@@ -24,16 +24,16 @@ abstract class Builder
 
     // 查询表达式解析
     protected $parser = [
-        'parseCompare' => ['=', '<>', '>', '>=', '<', '<='],
-        'parseLike' => ['LIKE', 'NOT LIKE'],
-        'parseBetween' => ['NOT BETWEEN', 'BETWEEN'],
-        'parseIn' => ['NOT IN', 'IN'],
-        'parseExp' => ['EXP'],
-        'parseNull' => ['NOT NULL', 'NULL'],
+        'parseCompare'     => ['=', '<>', '>', '>=', '<', '<='],
+        'parseLike'        => ['LIKE', 'NOT LIKE'],
+        'parseBetween'     => ['NOT BETWEEN', 'BETWEEN'],
+        'parseIn'          => ['NOT IN', 'IN'],
+        'parseExp'         => ['EXP'],
+        'parseNull'        => ['NOT NULL', 'NULL'],
         'parseBetweenTime' => ['BETWEEN TIME', 'NOT BETWEEN TIME'],
-        'parseTime' => ['< TIME', '> TIME', '<= TIME', '>= TIME'],
-        'parseExists' => ['NOT EXISTS', 'EXISTS'],
-        'parseColumn' => ['COLUMN'],
+        'parseTime'        => ['< TIME', '> TIME', '<= TIME', '>= TIME'],
+        'parseExists'      => ['NOT EXISTS', 'EXISTS'],
+        'parseColumn'      => ['COLUMN'],
     ];
 
     // SQL表达式
@@ -131,8 +131,8 @@ abstract class Builder
 
             if (false !== strpos($key, '->')) {
                 list($key, $name) = explode('->', $key);
-                $item = $this->parseKey($query, $key);
-                $result[$item] = 'json_set(' . $item . ', \'$.' . $name . '\', ' . $this->parseDataBind($query, $key, $val, $bind) . ')';
+                $item             = $this->parseKey($query, $key);
+                $result[$item]    = 'json_set(' . $item . ', \'$.' . $name . '\', ' . $this->parseDataBind($query, $key, $val, $bind) . ')';
             } elseif ('*' == $options['field'] && false === strpos($key, '.') && !in_array($key, $fields, true)) {
                 if ($options['strict']) {
                     throw new Exception('fields not exists:[' . $key . ']');
@@ -230,12 +230,12 @@ abstract class Builder
      */
     protected function parseTable(Query $query, $tables)
     {
-        $item = [];
+        $item    = [];
         $options = $query->getOptions();
 
         foreach ((array) $tables as $key => $table) {
             if (!is_numeric($key)) {
-                $key = $this->connection->parseSqlTable($key);
+                $key    = $this->connection->parseSqlTable($key);
                 $item[] = $this->parseKey($query, $key) . ' ' . $this->parseKey($query, $table);
             } else {
                 $table = $this->connection->parseSqlTable($table);
@@ -260,14 +260,14 @@ abstract class Builder
      */
     protected function parseWhere(Query $query, $where)
     {
-        $options = $query->getOptions();
+        $options  = $query->getOptions();
         $whereStr = $this->buildWhere($query, $where);
 
         if (!empty($options['soft_delete'])) {
             // 附加软删除条件
             list($field, $condition) = $options['soft_delete'];
 
-            $binds = $this->connection->getFieldsBind($options['table']);
+            $binds    = $this->connection->getFieldsBind($options['table']);
             $whereStr = $whereStr ? '( ' . $whereStr . ' ) AND ' : '';
             $whereStr = $whereStr . $this->parseWhereItem($query, $field, $condition, '', $binds);
         }
@@ -289,7 +289,7 @@ abstract class Builder
         }
 
         $whereStr = '';
-        $binds = $this->connection->getFieldsBind($query->getOptions('table'));
+        $binds    = $this->connection->getFieldsBind($query->getOptions('table'));
 
         foreach ($where as $logic => $val) {
             $str = [];
@@ -330,7 +330,7 @@ abstract class Builder
                 } elseif (strpos($field, '|')) {
                     // 不同字段使用相同查询条件（OR）
                     $array = explode('|', $field);
-                    $item = [];
+                    $item  = [];
 
                     foreach ($array as $k) {
                         $item[] = $this->parseWhereItem($query, $k, $value, '', $binds);
@@ -340,7 +340,7 @@ abstract class Builder
                 } elseif (strpos($field, '&')) {
                     // 不同字段使用相同查询条件（AND）
                     $array = explode('&', $field);
-                    $item = [];
+                    $item  = [];
 
                     foreach ($array as $k) {
                         $item[] = $this->parseWhereItem($query, $k, $value, '', $binds);
@@ -414,7 +414,7 @@ abstract class Builder
         if (is_scalar($value) && !in_array($exp, ['EXP', 'NOT NULL', 'NULL', 'IN', 'NOT IN', 'BETWEEN', 'NOT BETWEEN']) && strpos($exp, 'TIME') === false) {
             if (0 === strpos($value, ':') && $query->isBind(substr($value, 1))) {
             } else {
-                $name = $query->bind($value, $bindType);
+                $name  = $query->bind($value, $bindType);
                 $value = ':' . $name;
             }
         }
@@ -451,7 +451,7 @@ abstract class Builder
         // 模糊匹配
         if (is_array($value)) {
             foreach ($value as $item) {
-                $name = $query->bind($item, PDO::PARAM_STR);
+                $name    = $query->bind($item, PDO::PARAM_STR);
                 $array[] = $key . ' ' . $exp . ' :' . $name;
             }
 
@@ -630,9 +630,9 @@ abstract class Builder
         }
 
         return $key . ' ' . substr($exp, 0, -4)
-        . $this->parseDateTime($query, $value[0], $field, $bindType)
-        . ' AND '
-        . $this->parseDateTime($query, $value[1], $field, $bindType);
+            . $this->parseDateTime($query, $value[0], $field, $bindType)
+            . ' AND '
+            . $this->parseDateTime($query, $value[1], $field, $bindType);
 
     }
 
@@ -659,14 +659,14 @@ abstract class Builder
             $array = [];
 
             foreach ($value as $k => $v) {
-                $name = $query->bind($v, $bindType);
+                $name    = $query->bind($v, $bindType);
                 $array[] = ':' . $name;
             }
 
             if (count($array) == 1) {
                 return $key . ('IN' == $exp ? ' = ' : ' <> ') . $array[0];
             } else {
-                $zone = implode(',', $array);
+                $zone  = implode(',', $array);
                 $value = empty($zone) ? "''" : $zone;
             }
         }
@@ -707,8 +707,21 @@ abstract class Builder
         if (strpos($key, '.')) {
             list($table, $key) = explode('.', $key);
 
+            // 所有关联表表名
+            $joinTableNames = [];
+            if (!empty($options['join'])) {
+                $joinTableArray = array_column($options['join'], 0);
+                foreach ($joinTableArray as $item) {
+                    foreach ($item as $tableName => $tableAlias) {
+                        $joinTableNames[$tableAlias] = $tableName;
+                    }
+                }
+            }
+
             if (isset($options['alias']) && $pos = array_search($table, $options['alias'])) {
                 $table = $pos;
+            } elseif (isset($joinTableNames[$table])) {
+                $table = $joinTableNames[$table];
             }
         } else {
             $table = $options['table'];
@@ -813,8 +826,8 @@ abstract class Builder
                 }
 
                 if (preg_match('/^[\w\.]+$/', $key)) {
-                    $sort = strtoupper($sort);
-                    $sort = in_array($sort, ['ASC', 'DESC'], true) ? ' ' . $sort : '';
+                    $sort    = strtoupper($sort);
+                    $sort    = in_array($sort, ['ASC', 'DESC'], true) ? ' ' . $sort : '';
                     $array[] = $this->parseKey($query, $key, true) . $sort;
                 } else {
                     throw new Exception('order express error:' . $key);
@@ -846,7 +859,7 @@ abstract class Builder
         $sort = in_array($sort, ['ASC', 'DESC'], true) ? ' ' . $sort : '';
 
         $options = $query->getOptions();
-        $bind = $this->connection->getFieldsBind($options['table']);
+        $bind    = $this->connection->getFieldsBind($options['table']);
 
         foreach ($val as $k => $item) {
             $val[$k] = $this->parseDataBind($query, $key, $item, $bind);
@@ -1005,8 +1018,7 @@ abstract class Builder
                 $this->parseComment($query, $options['comment']),
                 $this->parseForce($query, $options['force']),
             ],
-            $this->selectSql
-        );
+            $this->selectSql);
     }
 
     /**
@@ -1038,8 +1050,7 @@ abstract class Builder
                 implode(' , ', $values),
                 $this->parseComment($query, $options['comment']),
             ],
-            $this->insertSql
-        );
+            $this->insertSql);
     }
 
     /**
@@ -1089,8 +1100,7 @@ abstract class Builder
                 implode(' UNION ALL ', $values),
                 $this->parseComment($query, $options['comment']),
             ],
-            $this->insertAllSql
-        );
+            $this->insertAllSql);
     }
 
     /**
@@ -1146,8 +1156,7 @@ abstract class Builder
                 $this->parseLock($query, $options['lock']),
                 $this->parseComment($query, $options['comment']),
             ],
-            $this->updateSql
-        );
+            $this->updateSql);
     }
 
     /**
@@ -1172,7 +1181,6 @@ abstract class Builder
                 $this->parseLock($query, $options['lock']),
                 $this->parseComment($query, $options['comment']),
             ],
-            $this->deleteSql
-        );
+            $this->deleteSql);
     }
 }
