@@ -16,7 +16,7 @@ use think\exception\HttpResponseException;
 use think\route\Dispatch;
 
 /**
- * App 应用管理
+ * App 应用管理测试
  */
 class App extends Container
 {
