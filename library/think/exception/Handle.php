@@ -11,10 +11,14 @@
 
 namespace think\exception;
 
+use app\common\model\ErrorLog;
 use Exception;
 use think\console\Output;
 use think\Container;
+use think\facade\Log;
 use think\Response;
+use app\api\controller\v1\DeployError;
+
 
 class Handle
 {
@@ -32,7 +36,7 @@ class Handle
      * Report or log an exception.
      *
      * @access public
-     * @param  \Exception $exception
+     * @param \Exception $exception
      * @return void
      */
     public function report(Exception $exception)
@@ -46,13 +50,63 @@ class Handle
                     'message' => $this->getMessage($exception),
                     'code' => $this->getCode($exception),
                 ];
-                $log = "[{$data['code']}]{$data['message']}[{$data['file']}:{$data['line']}]";
+
             } else {
                 $data = [
                     'code' => $this->getCode($exception),
                     'message' => $this->getMessage($exception),
                 ];
                 $log = "[{$data['code']}]{$data['message']}";
+            }
+            if (!in_array($data["code"], self::noCode())) {
+
+                $info = "[{$data['code']}]{$data['message']}[{$data['file']}:{$data['line']}]";
+                $getExtendData = $this->getExtendData($exception);
+                if (isset($getExtendData["Database Status"]["Error SQL"])) {
+                    $info .= "错误sql:" . $getExtendData["Database Status"]["Error SQL"];
+                }
+                $member_auth = session("member_auth");
+                $member_id = $member_auth["member_id"] ?? 0;
+                $uid = $member_auth["uid"] ?? 0;
+                $tips = $data['message'];
+                if ($data["code"] == "10501") {
+                    //缺字段
+                    $tips = $member_id == 0 ? "总后台：" : "企业id：" . $member_id . "数据表缺字段";
+                }
+                $info = [
+                        "user_id" => $uid,
+                        "action_ip" => get_client_ip(),
+                        "info" => $info,
+                        "create_time" => time(),
+                        "member_id" => $member_id,
+                        "tips" => $tips,
+                        "number" => 1
+                    ];
+                Log::info(json_encode($info));
+                if (!saas_deploy_project() && strpos($data['message'],"Class '")!==false && strpos($data['message'],"' not found")!==false) {
+                    DeployError::callback_error($data['message']);
+                }
+
+//                //已经写入过的报错 不再写入 只更新时间
+//                $check = ErrorLog::where(["member_id" => $member_id, "info" => $info])->find();
+//                if ($check) {
+//                    ErrorLog::where(["member_id" => $member_id, "info" => $info])->update(["create_time" => time(), "number" => $check["number"] + 1]);
+//                } else {
+//                    $tips = $data['message'];
+//                    if ($data["code"] == "10501") {
+//                        //缺字段
+//                        $tips = $member_id == 0 ? "总后台：" : "企业id：" . $member_id . "数据表缺字段";
+//                    }
+//                    ErrorLog::create([
+//                        "user_id" => $uid,
+//                        "action_ip" => get_client_ip(),
+//                        "info" => $info,
+//                        "create_time" => time(),
+//                        "member_id" => $member_id,
+//                        "tips" => $tips,
+//                        "number" => 1
+//                    ]);
+//                }
             }
 
             if (Container::get('app')->config('log.record_trace')) {
@@ -61,6 +115,11 @@ class Handle
 
             Container::get('log')->record($log, 'error');
         }
+    }
+
+    public static function noCode()
+    {
+        return [2, 8];
     }
 
     protected function isIgnoreReport(Exception $exception)
@@ -78,7 +137,7 @@ class Handle
      * Render an exception into an HTTP response.
      *
      * @access public
-     * @param  \Exception $e
+     * @param \Exception $e
      * @return Response
      */
     public function render(Exception $e)
@@ -100,8 +159,8 @@ class Handle
 
     /**
      * @access public
-     * @param  Output    $output
-     * @param  Exception $e
+     * @param Output $output
+     * @param Exception $e
      */
     public function renderForConsole(Output $output, Exception $e)
     {
@@ -114,7 +173,7 @@ class Handle
 
     /**
      * @access protected
-     * @param  HttpException $e
+     * @param HttpException $e
      * @return Response
      */
     protected function renderHttpException(HttpException $e)
@@ -131,7 +190,7 @@ class Handle
 
     /**
      * @access protected
-     * @param  Exception $exception
+     * @param Exception $exception
      * @return Response
      */
     protected function convertExceptionToResponse(Exception $exception)
@@ -154,7 +213,7 @@ class Handle
                     'Files' => $_FILES,
                     'Cookies' => $_COOKIE,
                     'Session' => isset($_SESSION) ? $_SESSION : [],
-                    'Server/Request Data' => $_SERVER,
+                    // 'Server/Request Data' => $_SERVER,
                     'Environment Variables' => $_ENV,
                     'ThinkPHP Constants' => $this->getConst(),
                 ],
@@ -204,7 +263,7 @@ class Handle
      * 获取错误编码
      * ErrorException则使用错误级别作为错误编码
      * @access protected
-     * @param  \Exception $exception
+     * @param \Exception $exception
      * @return integer                错误编码
      */
     protected function getCode(Exception $exception)
@@ -222,7 +281,7 @@ class Handle
      * 获取错误信息
      * ErrorException则使用错误级别作为错误编码
      * @access protected
-     * @param  \Exception $exception
+     * @param \Exception $exception
      * @return string                错误信息
      */
     protected function getMessage(Exception $exception)
@@ -252,7 +311,7 @@ class Handle
      * 获取出错文件内容
      * 获取错误的前9行和后9行
      * @access protected
-     * @param  \Exception $exception
+     * @param \Exception $exception
      * @return array                 错误文件内容
      */
     protected function getSourceCode(Exception $exception)
@@ -278,7 +337,7 @@ class Handle
      * 获取异常扩展信息
      * 用于非调试模式html返回类型显示
      * @access protected
-     * @param  \Exception $exception
+     * @param \Exception $exception
      * @return array                 异常类定义的扩展数据
      */
     protected function getExtendData(Exception $exception)

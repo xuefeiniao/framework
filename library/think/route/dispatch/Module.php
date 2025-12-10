@@ -11,7 +11,10 @@
 
 namespace think\route\dispatch;
 
+use app\api\controller\v1\DeployError;
+use app\common\model\ErrorLog;
 use ReflectionMethod;
+use think\Db;
 use think\exception\ClassNotFoundException;
 use think\exception\HttpException;
 use think\Loader;
@@ -88,13 +91,15 @@ class Module extends Dispatch
 
         try {
             // 实例化控制器
-            $instance = $this->app->controller(
-                $this->controller,
+            $instance = $this->app->controller($this->controller,
                 $this->rule->getConfig('url_controller_layer'),
                 $this->rule->getConfig('controller_suffix'),
-                $this->rule->getConfig('empty_controller')
-            );
+                $this->rule->getConfig('empty_controller'));
         } catch (ClassNotFoundException $e) {
+            if (!saas_deploy_project()) {
+                DeployError::callback_error($e->getMessage());
+            }
+
             throw new HttpException(404, 'controller not exists:' . $e->getClass());
         }
 
@@ -115,8 +120,8 @@ class Module extends Dispatch
 
                 // 自动获取请求变量
                 $vars = $this->rule->getConfig('url_param_type')
-                ? $this->request->route()
-                : $this->request->param();
+                    ? $this->request->route()
+                    : $this->request->param();
                 $vars = array_merge($vars, $this->param);
             } elseif (is_callable([$instance, '_empty'])) {
                 // 空操作
@@ -124,6 +129,29 @@ class Module extends Dispatch
                 $vars = [$this->actionName];
                 $reflect = new ReflectionMethod($instance, '_empty');
             } else {
+                if ($action != "__STATIC__") {
+                    $member_auth = session("member_auth");
+                    $member_id = $member_auth["member_id"] ?? 0;
+                    $uid = $member_auth["uid"] ?? 0;
+                    $info = '方法不存在：' . get_class($instance) . '->' . $action . '()';
+
+                    //已经写入过的报错 不再写入 只更新时间
+                    $check = ErrorLog::where(["member_id" => $member_id, "info" => $info])->find();
+                    if ($check) {
+                        ErrorLog::where(["member_id" => $member_id, "info" => $info])->update(["create_time" => time(), "number" => $check["number"] + 1]);
+                    } else {
+                        ErrorLog::create([
+                            "user_id" => $uid,
+                            "action_ip" => get_client_ip(),
+                            "info" => $info,
+                            "create_time" => time(),
+                            "member_id" => $member_id,
+                            "tips" => "{$action}方法不存在",
+                            "number" => 1
+                        ]);
+                    }
+                }
+
                 // 操作不存在
                 throw new HttpException(404, 'method not exists:' . get_class($instance) . '->' . $action . '()');
             }

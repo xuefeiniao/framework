@@ -165,7 +165,7 @@ class Lang
             return $this->lang[$range];
         }
 
-        $key = strtolower($name);
+        $key   = strtolower($name);
         $value = isset($this->lang[$range][$key]) ? $this->lang[$range][$key] : $name;
 
         // 变量解析
@@ -208,18 +208,13 @@ class Lang
         } elseif (isset($_COOKIE[$this->langCookieVar])) {
             // Cookie中设置了语言变量
             $langSet = strtolower($_COOKIE[$this->langCookieVar]);
-        } elseif (isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) && preg_match('/^([a-z\d\-]+)/i', $_SERVER['HTTP_ACCEPT_LANGUAGE'], $matches)) {
+        } elseif (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
             // 自动侦测浏览器语言
+            preg_match('/^([a-z\d\-]+)/i', $_SERVER['HTTP_ACCEPT_LANGUAGE'], $matches);
             $langSet = strtolower($matches[1]);
             if (isset($this->acceptLanguage[$langSet])) {
                 $langSet = $this->acceptLanguage[$langSet];
             }
-        }
-
-        if (preg_match('/^([a-z\d\-]+)/i', $langSet, $matches)) {
-            $langSet = strtolower($matches[1]);
-        } else {
-            $langSet = $this->range;
         }
 
         if (empty($this->allowLangList) || in_array($langSet, $this->allowLangList)) {

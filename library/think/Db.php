@@ -82,6 +82,9 @@ class Db
      */
     public static $executeTimes = 0;
 
+    //数据库配置
+    public static $config_db = [];
+
     /**
      * 配置
      * @access public
@@ -123,6 +126,12 @@ class Db
      */
     public static function connect($config = [], $name = false, $query = '')
     {
+        //增加多数据库配置项
+        if(empty($config) && !empty(self::$config_db))
+        {
+            $config = self::$config_db;
+        }
+        // --- end
         // 解析配置参数
         $options = self::parseConfig($config ?: self::$config);
 
@@ -172,13 +181,13 @@ class Db
         }
 
         $dsn = [
-            'type' => $info['scheme'],
+            'type'     => $info['scheme'],
             'username' => isset($info['user']) ? $info['user'] : '',
             'password' => isset($info['pass']) ? $info['pass'] : '',
             'hostname' => isset($info['host']) ? $info['host'] : '',
             'hostport' => isset($info['port']) ? $info['port'] : '',
             'database' => !empty($info['path']) ? ltrim($info['path'], '/') : '',
-            'charset' => isset($info['fragment']) ? $info['fragment'] : 'utf8',
+            'charset'  => isset($info['fragment']) ? $info['fragment'] : 'utf8',
         ];
 
         if (isset($info['query'])) {

@@ -14,6 +14,7 @@
 namespace traits\controller;
 
 use think\Container;
+use think\Db;
 use think\exception\HttpResponseException;
 use think\Response;
 use think\response\Redirect;
@@ -26,6 +27,9 @@ trait Jump
      */
     protected $app;
 
+    // 不访问lang的模块
+    public static $no_trans_module = ['install'];
+
     /**
      * 操作成功跳转的快捷方法
      * @access protected
@@ -36,7 +40,7 @@ trait Jump
      * @param  array     $header 发送的Header信息
      * @return void
      */
-    protected function success($msg = '', $url = null, $data = '', $wait = 3, array $header = [])
+    protected function success($msg = '', $url = null, $data = '', $wait = 5, array $header = [])
     {
         if (is_null($url) && isset($_SERVER["HTTP_REFERER"])) {
             $url = $_SERVER["HTTP_REFERER"];
@@ -44,11 +48,13 @@ trait Jump
             $url = (strpos($url, '://') || 0 === strpos($url, '/')) ? $url : Container::get('url')->build($url);
         }
 
+        $is_trans_msg = in_array(request()->module(), self::$no_trans_module) ? 0 : 1;
+
         $result = [
             'code' => 1,
-            'msg' => $msg,
+            'msg'  => $is_trans_msg ?lang($msg):$msg,
             'data' => $data,
-            'url' => $url,
+            'url'  => $url,
             'wait' => $wait,
         ];
 
@@ -73,20 +79,21 @@ trait Jump
      * @param  array     $header 发送的Header信息
      * @return void
      */
-    protected function error($msg = '', $url = null, $data = '', $wait = 3, array $header = [])
+    protected function error($msg = '', $url = null, $data = '', $wait = 0, array $header = [])
     {
         $type = $this->getResponseType();
         if (is_null($url)) {
-            $url = $this->app['request']->isAjax() ? '' : 'javascript:history.back(-1);';
+            // $url = $this->app['request']->isAjax() ? '' : 'javascript:history.back(-1);';
         } elseif ('' !== $url) {
             $url = (strpos($url, '://') || 0 === strpos($url, '/')) ? $url : $this->app['url']->build($url);
         }
 
+        $is_trans_msg = in_array(request()->module(), self::$no_trans_module) ? 0 : 1;
         $result = [
             'code' => 0,
-            'msg' => $msg,
+            'msg'  => $is_trans_msg ?lang($msg):$msg,
             'data' => $data,
-            'url' => $url,
+            'url'  => $url,
             'wait' => $wait,
         ];
 
@@ -113,12 +120,12 @@ trait Jump
     {
         $result = [
             'code' => $code,
-            'msg' => $msg,
+            'msg'  => $msg,
             'time' => time(),
             'data' => $data,
         ];
 
-        $type = $type ?: $this->getResponseType();
+        $type     = $type ?: $this->getResponseType();
         $response = Response::create($result, $type)->header($header);
 
         throw new HttpResponseException($response);
@@ -138,7 +145,7 @@ trait Jump
         $response = new Redirect($url);
 
         if (is_integer($params)) {
-            $code = $params;
+            $code   = $params;
             $params = [];
         }
 

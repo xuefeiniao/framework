@@ -630,9 +630,9 @@ abstract class Builder
         }
 
         return $key . ' ' . substr($exp, 0, -4)
-            . $this->parseDateTime($query, $value[0], $field, $bindType)
-            . ' AND '
-            . $this->parseDateTime($query, $value[1], $field, $bindType);
+        . $this->parseDateTime($query, $value[0], $field, $bindType)
+        . ' AND '
+        . $this->parseDateTime($query, $value[1], $field, $bindType);
 
     }
 

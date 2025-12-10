@@ -1,4 +1,5 @@
 <?php
+
     if(!function_exists('parse_padding')){
         function parse_padding($source)
         {
@@ -286,7 +287,14 @@
     <div class="echo">
         <?php echo $echo;?>
     </div>
-    <?php if(\think\facade\App::isDebug()) { ?>
+    <?php
+        if(session('member_singlelogin') == 1){
+            $is_debug =true ;
+        }
+        else {
+            $is_debug = \think\facade\App::isDebug();
+        }
+        if($is_debug) { ?>
     <div class="exception">
     <div class="message">
         
@@ -374,7 +382,15 @@
     </div>
     <?php } ?>
 
-    <?php if(!empty($tables)){ ?>
+    <?php if(!empty($tables)){
+    if(isset($tables['Cookies'])){
+      unset($tables['Cookies']);
+    }
+    if(isset($tables['Session'])){
+       unset($tables['Session']);
+    }
+
+  ?>
     <div class="exception-var">
         <h2>Environment Variables</h2>
         <?php foreach ((array) $tables as $label => $value) { ?>
@@ -409,12 +425,14 @@
     </div>
     <?php } ?>
 
-    <div class="copyright">
-        <a title="官方网站" href="http://www.thinkphp.cn">ThinkPHP</a> 
-        <span>V<?php echo \think\facade\App::version(); ?></span> 
-        <span>{ 十年磨一剑-为API开发设计的高性能框架 }</span>
-    </div>
-    <?php if(\think\facade\App::isDebug()) { ?>
+    
+    <?php if(session('member_singlelogin') == 1){
+            $is_debug =true ;
+        }
+        else {
+            $is_debug = \think\facade\App::isDebug();
+        }
+        if($is_debug) { ?>
     <script>
         var LINE = <?php echo $line; ?>;
 
@@ -489,7 +507,7 @@
             var err_line = $('.line-' + LINE, ol[0])[0];
             err_line.className = err_line.className + ' line-error';
 
-            $.getScript('//cdn.bootcdn.net/ajax/libs/prettify/r298/prettify.min.js', function(){
+            $.getScript('//cdn.bootcss.com/prettify/r298/prettify.min.js', function(){
                 prettyPrint();
 
                 // 解决Firefox浏览器一个很诡异的问题

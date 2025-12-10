@@ -23,15 +23,15 @@ use think\cache\Driver;
 class Redis extends Driver
 {
     protected $options = [
-        'host' => '127.0.0.1',
-        'port' => 6379,
-        'password' => '',
-        'select' => 0,
-        'timeout' => 0,
-        'expire' => 0,
+        'host'       => '127.0.0.1',
+        'port'       => 6379,
+        'password'   => '',
+        'select'     => 0,
+        'timeout'    => 0,
+        'expire'     => 0,
         'persistent' => false,
-        'prefix' => '',
-        'serialize' => true,
+        'prefix'     => '',
+        'serialize'  => true,
     ];
 
     /**
@@ -109,7 +109,7 @@ class Redis extends Driver
         if (is_null($value) || false === $value) {
             return $default;
         }
-
+        $value = gzuncompress($value);
         return $this->unserialize($value);
     }
 
@@ -133,10 +133,11 @@ class Redis extends Driver
             $first = true;
         }
 
-        $key = $this->getCacheKey($name);
+        $key    = $this->getCacheKey($name);
         $expire = $this->getExpireTime($expire);
 
         $value = $this->serialize($value);
+        $value = gzcompress($value, 1);
 
         if ($expire) {
             $result = $this->handler->setex($key, $expire, $value);
@@ -192,6 +193,15 @@ class Redis extends Driver
         $this->writeTimes++;
 
         return $this->handler->del($this->getCacheKey($name));
+    }
+
+    //删除标签
+    public function rmtag($tag)
+    {
+        $this->writeTimes++;
+
+        $tagName = $this->getTagKey($tag);
+        return $this->handler->del($tagName);
     }
 
     /**
@@ -264,7 +274,7 @@ class Redis extends Driver
      * @param  string $tag 缓存标签
      * @return array
      */
-    protected function getTagItem($tag)
+    public function getTagItem($tag)
     {
         $tagName = $this->getTagKey($tag);
         return $this->handler->sMembers($tagName);
